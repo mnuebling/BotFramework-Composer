@@ -13,6 +13,8 @@ import { EjectController } from '../controllers/eject';
 import { FormDialogController } from '../controllers/formDialog';
 import * as ExtensionsController from '../controllers/extensions';
 import { FeatureFlagController } from '../controllers/featureFlags';
+import { SettingsController } from '../controllers/settings';
+import { TelemetryController } from '../controllers/telemetry';
 
 import { UtilitiesController } from './../controllers/utilities';
 
@@ -87,6 +89,13 @@ router.post('/extensions/proxy/:url', ExtensionsController.performExtensionFetch
 //FeatureFlags
 router.get('/featureFlags', FeatureFlagController.getFeatureFlags);
 router.post('/featureFlags', FeatureFlagController.updateFeatureFlags);
+
+// Telemetry
+router.post('/telemetry/track', TelemetryController.trackEvent);
+
+// User Server Settings
+router.get('/settings', SettingsController.getUserSettings);
+router.post('/settings', SettingsController.updateUserSettings);
 
 const errorHandler = (handler: RequestHandler) => (req: Request, res: Response, next: NextFunction) => {
   Promise.resolve(handler(req, res, next)).catch(next);

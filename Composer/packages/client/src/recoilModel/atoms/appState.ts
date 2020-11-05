@@ -221,3 +221,14 @@ export const formDialogGenerationProgressingState = atom({
   key: getFullyQualifiedKey('formDialogGenerationProgressing'),
   default: false,
 });
+
+type ServerSettings = {
+  telemetry?: {
+    allowDataCollection?: boolean | null;
+  };
+};
+
+export const ServerSettingsState = atom<ServerSettings>({
+  key: getFullyQualifiedKey('serverSettings'),
+  default: {},
+});

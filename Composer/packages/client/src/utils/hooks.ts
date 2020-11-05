@@ -6,7 +6,7 @@ import { globalHistory } from '@reach/router';
 import replace from 'lodash/replace';
 import find from 'lodash/find';
 import { useRecoilValue } from 'recoil';
-import { FeatureFlagKey } from '@bfc/shared';
+import { FeatureFlagKey, TelemetrySettings } from '@bfc/shared';
 
 import {
   designPageLocationState,
@@ -19,6 +19,7 @@ import {
 import { bottomLinks, topLinks } from './pageLinks';
 import routerCache from './routerCache';
 import { projectIdCache } from './projectCache';
+import { initializeLogger } from '../telemetry/telemetryLogger';
 
 export const useLocation = () => {
   const { location, navigate } = globalHistory;
@@ -109,4 +110,11 @@ export const useInterval = (callback, delay) => {
       return () => clearInterval(interval);
     }
   }, [delay]);
+};
+
+export const useInitializeLogger = (telemetry?: TelemetrySettings) => {
+  useEffect(() => {
+    const logger = initializeLogger(telemetry);
+    return () => logger.flush();
+  }, [telemetry]);
 };

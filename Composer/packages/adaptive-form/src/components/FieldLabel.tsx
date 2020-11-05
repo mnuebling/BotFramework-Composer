@@ -11,6 +11,7 @@ import formatMessage from 'format-message';
 
 import { Link } from './Link';
 import { focusBorder } from './sharedStyles';
+import { useShellApi } from '@bfc/extension-client';
 
 interface DescriptionCalloutProps {
   title: string;
@@ -21,6 +22,8 @@ interface DescriptionCalloutProps {
 
 const DescriptionCallout: React.FC<DescriptionCalloutProps> = function DescriptionCallout(props) {
   const { description, title, helpLink } = props;
+  const { shellApi } = useShellApi();
+  const { telemetryLogger } = shellApi;
 
   if (!description) {
     return null;
@@ -45,12 +48,18 @@ const DescriptionCallout: React.FC<DescriptionCalloutProps> = function Descripti
                 href={helpLink}
                 rel="noopener noreferrer"
                 target="_blank"
+                onClick={() => {
+                  telemetryLogger.log('HelpLinkClicked', { url: helpLink });
+                }}
               >
                 {formatMessage('Learn more')}
               </Link>
             )}
           </div>
         ),
+      }}
+      onTooltipToggle={(visible) => {
+        visible && telemetryLogger.log('ToolTipOpened', null);
       }}
     >
       <div css={focusBorder} data-testid="FieldLabelDescriptionIcon" tabIndex={0}>

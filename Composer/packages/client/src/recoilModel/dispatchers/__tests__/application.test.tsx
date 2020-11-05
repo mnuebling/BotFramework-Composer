@@ -14,6 +14,7 @@ import {
   applicationErrorState,
   creationFlowStatusState,
   onboardingState,
+  ServerSettingsState,
 } from '../../atoms';
 import { dispatcherState } from '../../../recoilModel/DispatcherWrapper';
 import { Dispatcher } from '..';
@@ -31,6 +32,7 @@ describe('<Editor />', () => {
     const applicationError = useRecoilValue(applicationErrorState);
     const creationFlowState = useRecoilValue(creationFlowStatusState);
     const onboarding = useRecoilValue(onboardingState);
+    const serverSettings = useRecoilValue(ServerSettingsState);
 
     return {
       appUpdater,
@@ -40,6 +42,7 @@ describe('<Editor />', () => {
       applicationError,
       creationFlowState,
       onboarding,
+      serverSettings,
     };
   };
   let renderedComponent: HookResult<ReturnType<typeof useRecoilTestHook>>, dispatcher: Dispatcher;
@@ -184,5 +187,19 @@ describe('<Editor />', () => {
       home: { element: 'homepageElement' },
       editor: { element: 'editorElement' },
     });
+  });
+
+  it('should set allow data collection to true', () => {
+    act(() => {
+      dispatcher.setAllowDataCollection(true);
+    });
+    expect(renderedComponent.current.serverSettings.telemetry?.allowDataCollection).toBe(true);
+  });
+
+  it('should set allow data collection to false', () => {
+    act(() => {
+      dispatcher.setAllowDataCollection(false);
+    });
+    expect(renderedComponent.current.serverSettings.telemetry?.allowDataCollection).toBe(false);
   });
 });
