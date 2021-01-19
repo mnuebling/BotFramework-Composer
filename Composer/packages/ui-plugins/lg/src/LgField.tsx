@@ -10,6 +10,8 @@ import { FieldLabel, useFormData } from '@bfc/adaptive-form';
 import { LgMetaData, LgTemplateRef, LgType, CodeEditorSettings } from '@bfc/shared';
 import { filterTemplateDiagnostics } from '@bfc/indexers';
 
+import { locateLgTemplatePosition } from './locateLgTemplatePosition';
+
 const lspServerPath = '/lg-language-server';
 
 const tryGetLgMetaDataType = (lgText: string): string | null => {
@@ -45,21 +47,23 @@ const LgField: React.FC<FieldProps<string>> = (props) => {
 
   const lgTemplateRef = LgTemplateRef.parse(value);
   const lgName = lgTemplateRef ? lgTemplateRef.name : new LgMetaData(lgType, designerId || '').toString();
-  const lgFileId = `${currentDialog.lgFile}.${locale}`;
-  const lgFile = lgFiles && lgFiles.find((file) => file.id === lgFileId);
+
+  const relatedLgFile = locateLgTemplatePosition(lgFiles, lgName, locale);
+
+  const fallbackLgFileId = `${currentDialog.lgFile}.${locale}`;
+  const lgFile = relatedLgFile ?? lgFiles.find((f) => f.id === fallbackLgFileId);
+  const lgFileId = lgFile?.id ?? fallbackLgFileId;
 
   const updateLgTemplate = useCallback(
-    (body: string) => {
-      shellApi.debouncedUpdateLgTemplate(lgFileId, lgName, body);
+    async (body: string) => {
+      await shellApi.debouncedUpdateLgTemplate(lgFileId, lgName, body);
     },
     [lgName, lgFileId]
   );
 
-  const template = (lgFile &&
-    lgFile.templates &&
-    lgFile.templates.find((template) => {
-      return template.name === lgName;
-    })) || {
+  const template = lgFile?.templates?.find((template) => {
+    return template.name === lgName;
+  }) || {
     name: lgName,
     parameters: [],
     body: getInitialTemplate(name, value),
@@ -76,12 +80,16 @@ const LgField: React.FC<FieldProps<string>> = (props) => {
   const onChange = (body: string) => {
     if (designerId) {
       if (body) {
-        updateLgTemplate(body);
+        updateLgTemplate(body).then(() => {
+          if (lgTemplateRef) {
+            shellApi.commitChanges();
+          }
+        });
         props.onChange(new LgTemplateRef(lgName).toString());
-        shellApi.commitChanges();
       } else {
-        shellApi.removeLgTemplate(lgFileId, lgName);
-        props.onChange();
+        shellApi.removeLgTemplate(lgFileId, lgName).then(() => {
+          props.onChange();
+        });
       }
     }
   };

@@ -2,88 +2,102 @@
 // Licensed under the MIT License.
 import formatMessage from 'format-message';
 import { ExtensionPageContribution } from '@bfc/extension-client';
+import { checkForPVASchema } from '@bfc/shared';
 
 export type ExtensionPageConfig = ExtensionPageContribution & { id: string };
+
+export type PageLink = {
+  to: string;
+  iconName: string;
+  labelName: string;
+  disabled: boolean;
+  match?: RegExp;
+};
 
 export const topLinks = (
   projectId: string,
   openedDialogId: string,
   pluginPages: ExtensionPageConfig[],
-  showFormDialog: boolean
+  showFormDialog: boolean,
+  schema: any,
+  rootProjectId?: string
 ) => {
   const botLoaded = !!projectId;
-  let links = [
+  const linkBase =
+    projectId === rootProjectId || rootProjectId == null
+      ? `/bot/${projectId}/`
+      : `/bot/${rootProjectId}/skill/${projectId}/`;
+
+  let links: PageLink[] = [
     {
       to: '/home',
       iconName: 'Home',
       labelName: formatMessage('Home'),
-      exact: true,
       disabled: false,
     },
     {
-      to: `/bot/${projectId}/dialogs/${openedDialogId}`,
+      to: linkBase + `dialogs/${openedDialogId}`,
       iconName: 'SplitObject',
       labelName: formatMessage('Design'),
-      exact: false,
       disabled: !botLoaded,
+      match: /(bot\/[0-9.]+)$|(bot\/[0-9.]+\/skill\/[0-9.]+)$/,
     },
     {
-      to: `/bot/${projectId}/language-generation`,
+      to: linkBase + `language-generation/${openedDialogId}`,
       iconName: 'Robot',
       labelName: formatMessage('Bot Responses'),
-      exact: false,
       disabled: !botLoaded,
+      match: /language-generation\/[a-zA-Z0-9_-]+$/,
     },
     {
-      to: `/bot/${projectId}/language-understanding`,
+      to: linkBase + `language-understanding/${openedDialogId}`,
       iconName: 'People',
       labelName: formatMessage('User Input'),
-      exact: false,
       disabled: !botLoaded,
+      match: /language-understanding\/[a-zA-Z0-9_-]+$/,
     },
     {
-      to: `/bot/${projectId}/knowledge-base`,
+      to: linkBase + `knowledge-base/${openedDialogId}`,
       iconName: 'QnAIcon',
       labelName: formatMessage('QnA'),
-      exact: true,
       disabled: !botLoaded,
+      match: /knowledge-base\/[a-zA-Z0-9_-]+$/,
     },
     {
-      to: `/bot/${projectId}/notifications`,
+      to: `/bot/${rootProjectId || projectId}/diagnostics`,
       iconName: 'Warning',
-      labelName: formatMessage('Notifications'),
-      exact: true,
+      labelName: formatMessage('Diagnostics'),
       disabled: !botLoaded,
+      match: /diagnostics/,
     },
     {
-      to: `/bot/${projectId}/publish`,
+      to: `/bot/${rootProjectId || projectId}/publish`,
       iconName: 'CloudUpload',
       labelName: formatMessage('Publish'),
-      exact: true,
       disabled: !botLoaded,
     },
     {
-      to: `/bot/${projectId}/skills`,
-      iconName: 'PlugDisconnected',
-      labelName: formatMessage('Skills'),
-      exact: true,
+      to: `/bot/${rootProjectId || projectId}/botProjectsSettings`,
+      iconName: 'BotProjectsSettings',
+      labelName: formatMessage('Project Settings'),
       disabled: !botLoaded,
+      match: /botProjectsSettings/,
     },
     ...(showFormDialog
       ? [
           {
             to: `/bot/${projectId}/forms`,
             iconName: 'Table',
-            labelName: formatMessage('Forms'),
-            exact: false,
+            labelName: formatMessage('Forms (preview)'),
             disabled: !botLoaded,
           },
         ]
       : []),
   ];
 
-  if (process.env.COMPOSER_AUTH_PROVIDER === 'abs-h') {
-    links = links.filter((link) => link.to !== '/home');
+  // TODO: refactor when Composer can better model the left nav based on schema
+  if (schema && checkForPVASchema(schema)) {
+    links = links.filter((link) => link.to.indexOf('/knowledge-base') == -1 && link.to.indexOf('/skills') == -1);
   }
 
   if (pluginPages.length > 0) {
@@ -92,7 +106,6 @@ export const topLinks = (
         to: `/bot/${projectId}/plugin/${p.id}/${p.bundleId}`,
         iconName: p.icon ?? 'StatusCircleQuestionMark',
         labelName: p.label,
-        exact: true,
         disabled: !projectId,
       });
     });
@@ -101,12 +114,11 @@ export const topLinks = (
   return links;
 };
 
-export const bottomLinks = [
+export const bottomLinks: PageLink[] = [
   {
     to: `/settings`,
     iconName: 'Settings',
-    labelName: formatMessage('Settings'),
-    exact: false,
+    labelName: formatMessage('Composer Settings'),
     disabled: false,
   },
 ];

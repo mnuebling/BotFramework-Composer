@@ -39,6 +39,29 @@ export default async (composer: any): Promise<void> => {
       }
       composer.log('FINISHED BUILDING!');
     },
+    installComponent: async (runtimePath: string, packageName: string, version: string): Promise<string> => {
+      // run dotnet install on the project
+      const { stderr: installError, stdout: installOutput } = await execAsync(
+        `dotnet add package ${packageName}${version ? ' --version=' + version : ''}`,
+        {
+          cwd: path.join(runtimePath, 'azurewebapp'),
+        }
+      );
+      if (installError) {
+        throw new Error(installError);
+      }
+      return installOutput;
+    },
+    uninstallComponent: async (runtimePath: string, packageName: string): Promise<string> => {
+      // run dotnet install on the project
+      const { stderr: installError, stdout: installOutput } = await execAsync(`dotnet remove package ${packageName}`, {
+        cwd: path.join(runtimePath, 'azurewebapp'),
+      });
+      if (installError) {
+        throw new Error(installError);
+      }
+      return installOutput;
+    },
     identifyManifest: (runtimePath: string): string => {
       return path.join(runtimePath, 'azurewebapp', 'Microsoft.BotFramework.Composer.WebApp.csproj');
     },
@@ -56,7 +79,7 @@ export default async (composer: any): Promise<void> => {
       } else if (profile.type === 'azureFunctionsPublish') {
         csproj = 'Microsoft.BotFramework.Composer.Functions.csproj';
       }
-      const publishFolder = path.join(runtimePath, 'bin', 'Release', 'netcoreapp3.1');
+      const publishFolder = path.join(runtimePath, 'bin', 'release', 'publishTarget');
       const deployFilePath = path.join(runtimePath, '.deployment');
       const dotnetProjectPath = path.join(runtimePath, csproj);
 
@@ -71,10 +94,14 @@ export default async (composer: any): Promise<void> => {
       try {
         const configuration = JSON.parse(profile.configuration);
         const runtimeIdentifier = configuration.runtimeIdentifier;
+
+        // Don't set self-contained and runtimeIdentifier for AzureFunctions.
         let buildCommand = `dotnet publish "${dotnetProjectPath}" -c release -o "${publishFolder}" -v q`;
-        if (runtimeIdentifier) {
+
+        if (profile.type === 'azurePublish')
+        {
           // if runtime identifier set, make dotnet runtime to self contained, default runtime identifier is win-x64, please refer to https://docs.microsoft.com/en-us/dotnet/core/rid-catalog
-          buildCommand = `dotnet publish "${dotnetProjectPath}" -c release -o "${publishFolder}" -v q --self-contained true -r ${runtimeIdentifier}`;
+          buildCommand = `dotnet publish "${dotnetProjectPath}" -c release -o "${publishFolder}" -v q --self-contained true -r ${runtimeIdentifier ?? 'win-x64'}`;
         }
         const { stdout, stderr } = await execAsync(
           buildCommand,
@@ -132,7 +159,7 @@ export default async (composer: any): Promise<void> => {
         await copyDir(schemaSrcPath, localDisk, schemaDstPath, project.fileStorage, pathsToExclude);
         const schemaFolderInRuntime = path.join(destPath, 'azurewebapp/Schemas');
         await removeDirAndFiles(schemaFolderInRuntime);
-        return destPath;
+        return path.relative(project.dir, destPath);
       }
       throw new Error(`Runtime already exists at ${destPath}`);
     },
@@ -185,8 +212,34 @@ export default async (composer: any): Promise<void> => {
       }
       composer.log('BUILD COMPLETE');
     },
+    installComponent: async (runtimePath: string, packageName: string, version: string): Promise<string> => {
+      // run dotnet install on the project
+      const { stderr: installError, stdout: installOutput } = await execAsync(
+        `npm install --loglevel=error --save ${packageName}${version ? '@' + version : ''}`,
+        {
+          cwd: path.join(runtimePath),
+        }
+      );
+      if (installError) {
+        throw new Error(installError);
+      }
+      return installOutput;
+    },
+    uninstallComponent: async (runtimePath: string, packageName: string): Promise<string> => {
+      // run dotnet install on the project
+      const { stderr: installError, stdout: installOutput } = await execAsync(
+        `npm uninstall --loglevel=error --save ${packageName}`,
+        {
+          cwd: path.join(runtimePath),
+        }
+      );
+      if (installError) {
+        throw new Error(installError);
+      }
+      return installOutput;
+    },
     identifyManifest: (runtimePath: string): string => {
-      return path.join(runtimePath, 'Microsoft.BotFramework.Composer.WebApp.csproj');
+      return path.join(runtimePath, 'package.json');
     },
     run: async (project: any, localDisk: IFileStorage) => {
       // do stuff
@@ -229,10 +282,23 @@ export default async (composer: any): Promise<void> => {
         // used to read bot project template from source (bundled in plugin)
         const excludeFolder = new Set<string>().add(path.resolve(sourcePath, 'node_modules'));
         await copyDir(sourcePath, localDisk, destPath, project.fileStorage, excludeFolder);
-        return destPath;
-      } else {
-        throw new Error(`Runtime already exists at ${destPath}`);
+        const schemaDstPath = path.join(project.dir, 'schemas');
+        const schemaSrcPath = path.join(sourcePath, 'schemas');
+        const customSchemaExists = fs.existsSync(schemaDstPath);
+        const pathsToExclude: Set<string> = new Set();
+        if (customSchemaExists) {
+          const sdkExcludePath = await localDisk.glob('sdk.schema', schemaSrcPath);
+          if (sdkExcludePath.length > 0) {
+            pathsToExclude.add(path.join(schemaSrcPath, sdkExcludePath[0]));
+          }
+        }
+        await copyDir(schemaSrcPath, localDisk, schemaDstPath, project.fileStorage, pathsToExclude);
+        const schemaFolderInRuntime = path.join(destPath, 'schemas');
+        await removeDirAndFiles(schemaFolderInRuntime);
+
+        return path.relative(project.dir, destPath);
       }
+      throw new Error(`Runtime already exists at ${destPath}`);
     },
     setSkillManifest: async (
       dstRuntimePath: string,

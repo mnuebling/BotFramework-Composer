@@ -15,7 +15,7 @@ import { Dropdown } from 'office-ui-fabric-react/lib/Dropdown';
 import { TextField } from 'office-ui-fabric-react/lib/TextField';
 import { luIndexer, combineMessage } from '@bfc/indexers';
 import { PlaceHolderSectionName } from '@bfc/indexers/lib/utils/luUtil';
-import { SDKKinds, RegexRecognizer } from '@bfc/shared';
+import { SDKKinds, RegexRecognizer, checkForPVASchema } from '@bfc/shared';
 import { LuEditor, inlineModePlaceholder } from '@bfc/code-editor';
 import { IComboBoxOption } from 'office-ui-fabric-react/lib/ComboBox';
 import { useRecoilValue } from 'recoil';
@@ -35,10 +35,11 @@ import {
   qnaMatcherKey,
   onChooseIntentKey,
 } from '../../utils/dialogUtil';
-import { userSettingsState } from '../../recoilModel/atoms';
+import { schemasState, userSettingsState } from '../../recoilModel/atoms';
 import { nameRegex } from '../../constants';
 import { isRegExRecognizerType, isLUISnQnARecognizerType } from '../../utils/dialogValidator';
-import { validateDialogsSelectorFamily } from '../../recoilModel';
+import { dialogsSelectorFamily } from '../../recoilModel';
+import TelemetryClient from '../../telemetry/TelemetryClient';
 // -------------------- Styles -------------------- //
 
 const styles = {
@@ -95,7 +96,7 @@ const optionRow = {
 export const warningIcon = {
   marginLeft: 5,
   color: '#BE880A',
-  fontSize: 8,
+  fontSize: 12,
 };
 
 // -------------------- Validation Helpers -------------------- //
@@ -209,7 +210,8 @@ interface TriggerCreationModalProps {
 
 export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props) => {
   const { isOpen, onDismiss, onSubmit, dialogId, projectId } = props;
-  const dialogs = useRecoilValue(validateDialogsSelectorFamily(projectId));
+  const dialogs = useRecoilValue(dialogsSelectorFamily(projectId));
+  const schemas = useRecoilValue(schemasState(projectId));
   const userSettings = useRecoilValue(userSettingsState);
   const dialogFile = dialogs.find((dialog) => dialog.id === dialogId);
   const isRegEx = isRegExRecognizerType(dialogFile);
@@ -227,13 +229,20 @@ export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props)
   const [selectedType, setSelectedType] = useState(intentTypeKey);
   const showIntentName = selectedType === intentTypeKey;
   const showRegExDropDown = selectedType === intentTypeKey && isRegEx;
-  const showTriggerPhrase = selectedType === intentTypeKey && isLUISnQnA;
+  const showTriggerPhrase = selectedType === intentTypeKey && !isRegEx;
   const showEventDropDown = selectedType === eventTypeKey;
   const showActivityDropDown = selectedType === activityTypeKey;
   const showCustomEvent = selectedType === customEventKey;
   const eventTypes: IComboBoxOption[] = getEventTypes();
   const activityTypes: IDropdownOption[] = getActivityTypes();
-  const triggerTypeOptions: IDropdownOption[] = getTriggerTypes();
+  let triggerTypeOptions: IDropdownOption[] = getTriggerTypes();
+
+  if (schemas && checkForPVASchema(schemas.sdk)) {
+    triggerTypeOptions = triggerTypeOptions.filter(
+      (elem) =>
+        elem.text.indexOf('QnA Intent recognized') == -1 && elem.text.indexOf('Duplicated intents recognized') == -1
+    );
+  }
 
   if (isRegEx) {
     const qnaMatcherOption = triggerTypeOptions.find((t) => t.key === qnaMatcherKey);
@@ -246,11 +255,12 @@ export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props)
     }
   }
 
-  const onRenderOption = (option: IDropdownOption) => {
+  const onRenderOption = (option?: IDropdownOption) => {
+    if (option == null) return null;
     return (
       <div css={optionRow}>
         {option.text}
-        {option.data && option.data.icon && <Icon iconName={option.data.icon} style={warningIcon} />}
+        {option.data?.icon && <Icon iconName={option.data.icon} style={warningIcon} />}
       </div>
     );
   };
@@ -275,9 +285,10 @@ export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props)
     }
     onDismiss();
     onSubmit(dialogId, formData);
+    TelemetryClient.track('AddNewTriggerCompleted', { kind: formData.$kind });
   };
 
-  const onSelectTriggerType = (e, option) => {
+  const onSelectTriggerType = (e: React.FormEvent, option) => {
     setSelectedType(option.key || '');
     const compoundTypes = [activityTypeKey, eventTypeKey];
     const isCompound = compoundTypes.some((t) => option.key === t);
@@ -309,8 +320,9 @@ export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props)
     }
   };
 
-  const onNameChange = (e, name) => {
+  const onNameChange = (e: React.FormEvent, name: string | undefined) => {
     const errors: TriggerFormDataErrors = {};
+    if (name == null) return;
     errors.intent = validateIntentName(selectedType, name);
     if (showTriggerPhrase && formData.triggerPhrases) {
       errors.triggerPhrases = getLuDiagnostics(name, formData.triggerPhrases);
@@ -318,8 +330,9 @@ export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props)
     setFormData({ ...formData, intent: name, errors: { ...formData.errors, ...errors } });
   };
 
-  const onChangeRegEx = (e, pattern) => {
+  const onChangeRegEx = (e: React.FormEvent, pattern: string | undefined) => {
     const errors: TriggerFormDataErrors = {};
+    if (pattern == null) return;
     errors.regEx = validateRegExPattern(selectedType, isRegEx, pattern);
     setFormData({ ...formData, regEx: pattern, errors: { ...formData.errors, ...errors } });
   };
@@ -361,7 +374,6 @@ export const TriggerCreationModal: React.FC<TriggerCreationModalProps> = (props)
             options={triggerTypeOptions}
             styles={dropdownStyles}
             onChange={onSelectTriggerType}
-            //@ts-ignore：
             onRenderOption={onRenderOption}
           />
           {showEventDropDown && (

@@ -1,3 +1,5 @@
+import { PublishResult } from '@botframework-composer/types';
+
 export type PVAPublishJob = {
   comment: string;
   diagnostics: DiagnosticInfo[];
@@ -6,6 +8,7 @@ export type PVAPublishJob = {
   operationId: string;
   startTimeUtc: string;
   state: PublishState;
+  testUrl: string;
 };
 
 type DiagnosticInfo = {
@@ -41,24 +44,6 @@ export type PublishState =
   | 'Done'
   | 'PreconditionFailed'
   | 'Failed';
-
-/** Copied from @bfc/extension */
-export interface PublishResult {
-  comment?: string;
-  endpointURL?: string;
-  eTag?: string;
-  id?: string;
-  log?: string;
-  message: string;
-  status?: number;
-  time?: Date;
-}
-
-/** Copied from @bfc/extension */
-export type PublishResponse = {
-  status: number;
-  result: PublishResult;
-};
 
 /** Copied from @bfc/extension */
 export type UserIdentity = {

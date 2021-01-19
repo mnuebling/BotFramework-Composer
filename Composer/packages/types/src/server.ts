@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-import { Skill, FileInfo } from './indexers';
+import { FileInfo } from './indexers';
 import { IDiagnostic } from './diagnostic';
 import { DialogSetting } from './settings';
 
@@ -8,6 +8,7 @@ export type IBotProject = {
   fileStorage: any;
   dir: string;
   dataDir: string;
+  eTag?: string;
   id: string | undefined;
   name: string;
   builder: any;
@@ -17,7 +18,6 @@ export type IBotProject = {
   defaultUISchema: {
     [key: string]: string;
   };
-  skills: Skill[];
   diagnostics: IDiagnostic[];
   settingManager: ISettingManager;
   settings: DialogSetting | null;
@@ -26,7 +26,6 @@ export type IBotProject = {
     files: FileInfo[];
     location: string;
     schemas: any;
-    skills: Skill[];
     diagnostics: IDiagnostic[];
     settings: DialogSetting | null;
   };

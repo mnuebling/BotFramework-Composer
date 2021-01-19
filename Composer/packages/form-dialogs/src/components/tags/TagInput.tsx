@@ -7,6 +7,8 @@ import formatMessage from 'format-message';
 import * as React from 'react';
 import { Tag } from 'src/components/tags/Tag';
 
+import { csvToArray } from './utils';
+
 const Root = styled.div({
   position: 'relative',
   boxSizing: 'border-box',
@@ -93,10 +95,15 @@ export const TagInput = (props: TagInputProps) => {
 
   const addTag = (value: string) => {
     const clonedTags = [...tags];
-    if (clonedTags.indexOf(value) === -1) {
-      clonedTags.push(value);
-      onChange(clonedTags);
-    }
+    // Extract comma separated tags
+    const enteredTags = csvToArray(value).filter((t) => !!t);
+
+    // Remove repetitive tags
+    const newTags = enteredTags.filter((et) => !clonedTags.includes(et));
+
+    clonedTags.push(...newTags);
+    onChange(clonedTags);
+
     setInput('');
   };
 
@@ -104,6 +111,19 @@ export const TagInput = (props: TagInputProps) => {
     const clonedTags = [...tags];
     clonedTags.splice(i, 1);
     onChange(clonedTags);
+  };
+
+  const onPaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+    event.preventDefault();
+
+    const pasteData = event.clipboardData;
+
+    if (!pasteData.types.includes('text/plain')) {
+      return;
+    }
+
+    const value = pasteData.getData('text/plain');
+    addTag(value);
   };
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -176,6 +196,7 @@ export const TagInput = (props: TagInputProps) => {
           value={input}
           onChange={onInputChange}
           onKeyDown={onInputKeyDown}
+          onPaste={onPaste}
         />
       )}
     </Root>

@@ -5,8 +5,8 @@
       "label": "Dialog adaptacyjny",
       "properties": {
         "recognizer": {
-          "description": "Aby zrozumieć, co mówi użytkownik, dialog wymaga „aparatu rozpoznawania” obejmującego przykładowe wyrazy i zdania, które mogą być używane przez użytkowników.",
-          "label": "Interpretacja języka"
+          "description": "Aby zrozumieć, co mówi użytkownik, dialog wymaga elementu „Recognizer” obejmującego przykładowe wyrazy i zdania, które mogą być używane przez użytkowników.",
+          "label": "Rozumienie języka"
         }
       }
     }
@@ -162,8 +162,8 @@
   },
   "Microsoft.ThrowException": {
     "form": {
-      "label": "Throw an exception",
-      "subtitle": "Throw an exception"
+      "label": "Zgłoś wyjątek",
+      "subtitle": "Zgłoś wyjątek"
     }
   },
   "Microsoft.TraceActivity": {
@@ -174,8 +174,8 @@
   },
   "Microsoft.Ask": {
     "form": {
-      "label": "Send a response to ask a question",
-      "subtitle": "Ask Activity"
+      "label": "Wyślij odpowiedź, aby zadać pytanie",
+      "subtitle": "Działanie Ask"
     }
   },
   "Microsoft.AttachmentInput": {
@@ -228,8 +228,8 @@
   },
   "Microsoft.OnAssignEntity": {
     "form": {
-      "label": "Handle a condition when an entity is assigned",
-      "subtitle": "EntityAssigned activity"
+      "label": "Obsłuż warunek, gdy jednostka zostanie przypisana",
+      "subtitle": "Działanie EntityAssigned"
     }
   },
   "Microsoft.OnBeginDialog": {
@@ -265,8 +265,8 @@
   },
   "Microsoft.OnEndOfActions": {
     "form": {
-      "label": "Handle a condition when actions have ended",
-      "subtitle": "EndOfActions activity"
+      "label": "Obsłuż warunek, gdy akcje zostaną zakończone",
+      "subtitle": "Działanie EndOfActions"
     }
   },
   "Microsoft.OnEndOfConversationActivity": {
@@ -295,8 +295,8 @@
   },
   "Microsoft.OnInstallationUpdateActivity": {
     "form": {
-      "label": "Installation updated",
-      "subtitle": "Installation updated activity"
+      "label": "Zaktualizowano instalację",
+      "subtitle": "Działanie zaktualizowania instalacji"
     }
   },
   "Microsoft.OnIntent": {

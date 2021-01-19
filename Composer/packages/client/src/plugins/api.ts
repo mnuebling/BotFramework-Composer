@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-import { OAuthClient, OAuthOptions } from '../utils/oauthClient';
+import { AuthParameters } from '@botframework-composer/types';
+
+import { AuthClient } from '../utils/authClient';
 
 interface IAPI {
   auth: AuthAPI;
@@ -15,14 +17,22 @@ interface PublishConfig {
 }
 
 interface AuthAPI {
-  login: (options: OAuthOptions) => Promise<string>; // returns an id token
-  getAccessToken: (options: OAuthOptions) => Promise<string>; // returns an access token
+  getAccessToken: (options: AuthParameters) => Promise<string>; // returns an access token
+  logOut: () => Promise<void>;
 }
 
 interface PublishAPI {
-  setConfigIsValid?: (valid: boolean) => void;
-  setPublishConfig?: (config: PublishConfig) => void;
   useConfigBeingEdited?: (() => PublishConfig[]) | (() => void);
+  startProvision?: (config: any) => void;
+  currentProjectId?: () => string;
+  closeDialog?: () => void;
+  onBack?: () => void;
+  setTitle?: (value) => void;
+  getSchema?: () => any;
+  getType?: () => string;
+  savePublishConfig?: (config: PublishConfig) => void;
+  getTokenFromCache?: () => { accessToken: string; graphToken: string };
+  isGetTokenFromUser?: () => boolean;
 }
 
 class API implements IAPI {
@@ -31,19 +41,24 @@ class API implements IAPI {
 
   constructor() {
     this.auth = {
-      login: (options: OAuthOptions) => {
-        const client = new OAuthClient(options);
-        return client.login();
+      getAccessToken: (params: AuthParameters) => {
+        return AuthClient.getAccessToken(params);
       },
-      getAccessToken: (options: OAuthOptions) => {
-        const client = new OAuthClient(options);
-        return client.getTokenSilently();
+      logOut: () => {
+        return AuthClient.logOut();
       },
     };
     this.publish = {
-      setConfigIsValid: undefined,
-      setPublishConfig: undefined,
       useConfigBeingEdited: undefined,
+      startProvision: undefined,
+      currentProjectId: undefined,
+      closeDialog: undefined,
+      onBack: undefined,
+      setTitle: undefined,
+      getSchema: undefined,
+      savePublishConfig: undefined,
+      getTokenFromCache: undefined,
+      isGetTokenFromUser: undefined,
     };
   }
 }

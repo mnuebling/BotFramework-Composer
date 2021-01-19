@@ -4,13 +4,14 @@
 import { useRecoilState } from 'recoil';
 import { LgFile, LgTemplate } from '@bfc/shared';
 import { useRecoilValue } from 'recoil';
-import { act } from '@botframework-composer/test-utils/lib/hooks';
+import { act, HookResult } from '@botframework-composer/test-utils/lib/hooks';
 
 import { lgDispatcher } from '../lg';
 import { renderRecoilHook } from '../../../../__tests__/testUtils';
-import { lgFilesState, currentProjectIdState } from '../../atoms';
+import { currentProjectIdState } from '../../atoms';
 import { dispatcherState } from '../../../recoilModel/DispatcherWrapper';
 import { Dispatcher } from '..';
+import { lgFilesSelectorFamily } from '../../selectors';
 
 const projectId = '123asad.123sad';
 
@@ -38,10 +39,11 @@ jest.mock('../../parsers/lgWorker', () => {
 });
 const lgFiles = [
   {
-    id: 'common.en-us',
+    id: 'a.en-us',
     content: `\r\n# Hello\r\n-hi`,
     templates: [{ name: 'Hello', body: '-hi', parameters: [] }],
     diagnostics: [],
+    imports: [],
     allTemplates: [{ name: 'Hello', body: '-hi', parameters: [] }],
   },
 ] as LgFile[];
@@ -55,22 +57,23 @@ const getLgTemplate = (name, body): LgTemplate =>
   } as LgTemplate);
 
 describe('Lg dispatcher', () => {
-  let renderedComponent, dispatcher: Dispatcher;
-  beforeEach(() => {
-    const useRecoilTestHook = () => {
-      const [lgFiles, setLgFiles] = useRecoilState(lgFilesState(projectId));
-      const currentDispatcher = useRecoilValue(dispatcherState);
+  const useRecoilTestHook = () => {
+    const [lgFiles, setLgFiles] = useRecoilState(lgFilesSelectorFamily(projectId));
+    const currentDispatcher = useRecoilValue(dispatcherState);
 
-      return {
-        lgFiles,
-        setLgFiles,
-        currentDispatcher,
-      };
+    return {
+      lgFiles,
+      setLgFiles,
+      currentDispatcher,
     };
+  };
 
+  let renderedComponent: HookResult<ReturnType<typeof useRecoilTestHook>>, dispatcher: Dispatcher;
+
+  beforeEach(() => {
     const { result } = renderRecoilHook(useRecoilTestHook, {
       states: [
-        { recoilState: lgFilesState(projectId), initialValue: lgFiles },
+        { recoilState: lgFilesSelectorFamily(projectId), initialValue: lgFiles },
         { recoilState: currentProjectIdState, initialValue: projectId },
       ],
       dispatcher: {
@@ -87,7 +90,7 @@ describe('Lg dispatcher', () => {
   it('should create a lg template', async () => {
     await act(async () => {
       await dispatcher.createLgTemplate({
-        id: 'common.en-us',
+        id: 'a.en-us',
         template: getLgTemplate('Test', '-add'),
         projectId,
       });
@@ -98,7 +101,7 @@ describe('Lg dispatcher', () => {
 
   it('should update a lg file', async () => {
     await act(async () => {
-      await dispatcher.updateLgFile({ id: 'common.en-us', content: `test`, projectId });
+      await dispatcher.updateLgFile({ id: 'a.en-us', content: `test`, projectId });
     });
 
     expect(renderedComponent.current.lgFiles[0].content).toBe(`test`);
@@ -107,7 +110,7 @@ describe('Lg dispatcher', () => {
   it('should update a lg template', async () => {
     await act(async () => {
       await dispatcher.updateLgTemplate({
-        id: 'common.en-us',
+        id: 'a.en-us',
         templateName: 'Hello',
         template: getLgTemplate('Hello', '-TemplateValue'),
         projectId,
@@ -120,7 +123,7 @@ describe('Lg dispatcher', () => {
   it('should remove a lg template', async () => {
     await act(async () => {
       await dispatcher.removeLgTemplate({
-        id: 'common.en-us',
+        id: 'a.en-us',
         templateName: 'Hello',
         projectId,
       });
@@ -132,7 +135,7 @@ describe('Lg dispatcher', () => {
   it('should remove lg templates', async () => {
     await act(async () => {
       await dispatcher.removeLgTemplates({
-        id: 'common.en-us',
+        id: 'a.en-us',
         templateNames: ['Hello'],
         projectId,
       });

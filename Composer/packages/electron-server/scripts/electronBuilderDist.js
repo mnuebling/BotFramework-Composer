@@ -1,8 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+/* eslint-disable @typescript-eslint/no-var-requires */
 
 const { resolve } = require('path');
-const { exec } = require('child_process');
+// eslint-disable-next-line security/detect-child-process
+const { execSync } = require('child_process');
+
+const { log } = require('./common');
 
 /*
  * Calls electron-builder to take the pre-packed app contents and turn them into
@@ -34,22 +38,11 @@ try {
   }
 
   // call electron-builder . --prepackaged --config electron-builder-config.json
-  const cmd = `"${electronBuilderBinary}" "${electronServerDir}" --${platform} --x64 --prepackaged "${unpackedAppDir}" --config electron-builder-config.json`;
-  console.log('[electronBuilderDist.js] Executing command: ', cmd);
+  const cmd = `"${electronBuilderBinary}" --projectDir "${electronServerDir}" --${platform} --x64 --prepackaged "${unpackedAppDir}" --config electron-builder-config.json`;
+  log.info('Executing command: ', cmd);
 
-  const proc = exec(cmd);
-  proc.stdout.on('data', data => {
-    console.log(data);
-  });
-  proc.stderr.on('data', data => {
-    console.error(data);
-  });
-  proc.on('close', code => {
-    if (code !== 0) {
-      throw new Error(`[electronBuilderDist.js] electron-builder exited with code ${code}`);
-    }
-  });
+  execSync(cmd, { stdio: 'inherit' }); // lgtm [js/shell-command-injection-from-environment]
 } catch (e) {
-  console.error('[electronBuilderDist.js] Error occurred while using electron-builder --dir: ', e);
+  log.error('Error occurred while using electron-builder --dir: ', e);
   process.exit(1);
 }

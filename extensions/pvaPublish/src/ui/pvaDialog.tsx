@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, FC } from 'react';
 import * as React from 'react';
-import { getAccessToken, setConfigIsValid, setPublishConfig, fetch } from '@bfc/extension-client';
+import { closeDialog, getAccessToken, savePublishConfig, fetch, onBack } from '@bfc/extension-client';
 import {
+  DefaultButton,
   Dropdown,
   IDropdownOption,
   ResponsiveMode,
@@ -14,7 +15,7 @@ import {
 } from 'office-ui-fabric-react';
 import formatMessage from 'format-message';
 
-import { root } from './styles';
+import { buttonBar as buttonBarStyles, root } from './styles';
 import { Bot, BotEnvironment } from './types';
 
 const PVABotIcon = require('./media/pva-bot-icon.svg');
@@ -32,12 +33,13 @@ export const PVADialog: FC = () => {
   const [token, setToken] = useState('');
   const [tenantId, setTenantId] = useState('');
   const [envs, setEnvs] = useState<BotEnvironment[]>([]);
-  const [env, setEnv] = useState<string>(null);
+  const [env, setEnv] = useState<string | undefined>(undefined);
   const [bots, setBots] = useState<Bot[]>([]);
-  const [bot, setBot] = useState<Bot>(null);
+  const [bot, setBot] = useState<Bot | undefined>(undefined);
   const [loggingIn, setLoggingIn] = useState(false);
   const [fetchingEnvironments, setFetchingEnvironments] = useState(false);
   const [fetchingBots, setFetchingBots] = useState(false);
+  const [configIsValid, setConfigIsValid] = useState(false);
 
   const login = useCallback(() => {
     setLoggingIn(true);
@@ -87,22 +89,26 @@ export const PVADialog: FC = () => {
         setFetchingEnvironments(false);
         setEnvs(envs);
         if (envs && envs.length) {
-          setEnv(envs[0]);
+          setEnv(envs[0].id);
         }
       };
       fetchEnvs();
     }
   }, [tenantId, token, pvaHeaders]);
 
-  const onSelectEnv = useCallback((event, item: IDropdownOption) => {
-    setEnv(item.key + '');
+  const onSelectEnv = useCallback((event, item?: IDropdownOption) => {
+    if (item) {
+      setEnv(`${item.key}`);
+    }
   }, []);
 
   const onSelectBot = useCallback(
-    (event, item: IDropdownOption) => {
-      const botId = item.key + '';
-      const bot = bots.find((bot) => bot.id === botId);
-      setBot(bot);
+    (event, item?: IDropdownOption) => {
+      if (item) {
+        const botId = `${item.key}`;
+        const bot = bots.find((bot) => bot.id === botId);
+        setBot(bot);
+      }
     },
     [bots, env]
   );
@@ -120,7 +126,7 @@ export const PVADialog: FC = () => {
         if (bots && bots.length) {
           setBot(bots[0]);
         } else {
-          setBot(null);
+          setBot(undefined);
         }
       };
       fetchBots();
@@ -133,7 +139,11 @@ export const PVADialog: FC = () => {
     } else {
       setConfigIsValid(false);
     }
-    setPublishConfig({ botId: (bot || {}).id, envId: env, tenantId, deleteMissingComponents: true });
+  }, [env, bot, tenantId]);
+
+  const onSave = useCallback(() => {
+    savePublishConfig({ botId: (bot || {}).id, envId: env, tenantId, deleteMissingComponents: true });
+    closeDialog();
   }, [env, bot, tenantId]);
 
   const loggedIn = useMemo(() => {
@@ -270,11 +280,36 @@ export const PVADialog: FC = () => {
     }
   }, [loggedIn, loggingIn]);
 
+  const buttonBar = useMemo(() => {
+    if (loggedIn) {
+      return (
+        <div style={buttonBarStyles}>
+          <DefaultButton
+            text="Back"
+            onClick={onBack}
+            styles={{
+              root: { marginLeft: 'auto' },
+            }}
+          />
+          <PrimaryButton
+            text="Save"
+            onClick={onSave}
+            disabled={!configIsValid}
+            styles={{
+              root: { marginLeft: 8 },
+            }}
+          />
+        </div>
+      );
+    }
+  }, [configIsValid, loggedIn]);
+
   return (
     <div style={root}>
       {loginSplash}
       {envPicker}
       {botPicker}
+      {buttonBar}
     </div>
   );
 };
